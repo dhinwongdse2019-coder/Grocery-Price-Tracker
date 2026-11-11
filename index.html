@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Groceries"><meta name="theme-color" content="#5c8a64"><meta name="color-scheme" content="light dark">
 <title>Grocery Price Tracker</title>
 <style>
 :root{--bg:#f7f5f0;--card:#fff;--tx:#2b2b2b;--mu:#7a776f;--bd:#e6e2d9;--ac:#5c8a64;--acs:#e8f0e9;--wa:#c98a2b;--ba:#b9503f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1d1b;--card:#272725;--tx:#ecebe6;--mu:#a09d94;--bd:#3a3a36;--ac:#7fb088;--acs:#2c3a2f}}
 :root[data-theme="dark"]{--bg:#1d1d1b;--card:#272725;--tx:#ecebe6;--mu:#a09d94;--bd:#3a3a36;--ac:#7fb088;--acs:#2c3a2f}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;display:flex;min-height:100vh}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;display:flex;min-height:100vh}
 nav{width:220px;padding:24px 14px;border-right:1px solid var(--bd);position:sticky;top:0;height:100vh;flex:none}
 nav h1{font-size:16px;margin:0 10px 20px}nav a{display:block;padding:9px 12px;border-radius:10px;color:var(--mu);cursor:pointer;margin-bottom:2px}
 nav a.on{background:var(--acs);color:var(--ac);font-weight:600}
@@ -25,12 +26,12 @@ label{display:block;font-size:13px;color:var(--mu);margin:10px 0 3px}.row{displa
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px;z-index:20}
 #modal .card{width:100%;max-width:520px;margin:0}.err{color:var(--ba);font-size:13px;min-height:18px}.ban{background:#f6e9d2;color:#6f4c0f;border-radius:12px;padding:10px 14px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 svg{width:100%;height:auto}.empty{color:var(--mu);padding:12px 0}
-@media(max-width:760px){body{display:block;padding-bottom:64px}nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;height:auto;display:flex;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));border-right:0;border-top:1px solid var(--bd);background:var(--card);z-index:10;overflow-x:auto}nav h1{display:none}nav a{flex:1;font-size:11px;padding:8px 6px;text-align:center;white-space:nowrap;margin:0}main{padding:18px 14px}}
+@media(max-width:760px){input,select,textarea{font-size:16px}body{display:block;padding-bottom:64px}nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;height:auto;display:flex;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));border-right:0;border-top:1px solid var(--bd);background:var(--card);z-index:10;overflow-x:auto}nav h1{display:none}nav a{flex:1;font-size:11px;padding:8px 6px;text-align:center;white-space:nowrap;margin:0}main{padding:18px 14px}}
 </style></head><body>
 <nav id="nav"></nav><main id="main"></main><div id="modal"></div>
 <script>
 const U={g:['m',1],kg:['m',1000],ml:['v',1],l:['v',1000],pieces:['c',1],packs:['k',1]};
-const STORES=['Tesco','Sainsbury’s','Aldi','Lidl','Asda','Morrisons','Waitrose','M&S','Other'];
+const STORES=['Tesco','Sainsbury’s','Aldi','Lidl','Asda','Morrisons','Waitrose','M&S','Iceland','Other'];
 const CATS=['Dairy','Meat','Vegetables','Fruit','Bakery','Frozen','Drinks','Snacks','Household','Other'];
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const NAV=[['dash','Dashboard'],['groc','My Groceries'],['cmp','Price Comparison'],['exp','Expiry Tracker'],['hist','Purchase History'],['set','Settings']];
@@ -111,9 +112,10 @@ function hist(){const L=[...S.purchases].filter(r=>(prod(r.productId)?.name||'')
 return`<div class="bar"><input placeholder="Filter by product" value="${esc(HQ)}" oninput="HQ=this.value;histR()"></div><div class="card" id="hl">${hl(L)}</div>`}
 function hl(L){return tbl(['Date','Product','Store','Pack','Total','Unit price','Expiry',''],L.map(r=>`<tr><td>${fd(r.date)}</td><td>${esc(prod(r.productId)?.name)}${r.demo?' <span class="pill w">demo</span>':''}${r.kind=='check'?' <span class="pill w">checked</span>':''}</td><td>${esc(r.store)}</td><td>${pk(r)}</td><td>${money(r.price)}</td><td>${money(up(r).v)} <span class="mu">${up(r).l}</span></td><td>${exp(r)}</td><td>${acts(r)}</td></tr>`))}
 function histR(){$('#hl').innerHTML=hl([...S.purchases].filter(r=>(prod(r.productId)?.name||'').toLowerCase().includes(HQ.toLowerCase())).sort((a,b)=>a.date<b.date?1:-1))}
-function setV(){return`<div class="card"><h3>Export data</h3><p class="mu">Copy this JSON and keep it somewhere safe.</p><textarea id="ex" rows="5" readonly>${esc(JSON.stringify(S))}</textarea><p><button class="btn" onclick="cp()">Copy to clipboard</button></p></div>
+function setV(){return`<div class="card"><h3>Export data</h3><p class="mu">Copy this JSON and keep it somewhere safe.</p><textarea id="ex" rows="5" readonly>${esc(JSON.stringify(S))}</textarea><p><button class="btn" onclick="cp()">Copy to clipboard</button> <button class="btn s" onclick="dl()">Download .json file</button></p></div>
 <div class="card"><h3>Import data</h3><p class="mu">Choose an exported .json file, or paste the JSON. This replaces your current data.</p><input type="file" accept=".json,application/json" onchange="imF(this)"><textarea id="im" rows="4" placeholder="Paste JSON here" style="margin-top:10px"></textarea><p class="err" id="ie"></p><button class="btn" onclick="imp($('#im').value)">Import</button></div>
 <div class="card"><h3>Reset</h3><button class="btn s" onclick="clearDemo()">Clear demo data</button> <button class="btn d" onclick="ask('Delete ALL data permanently?',()=>{S={products:[],purchases:[]};save();render()})">Delete everything</button></div>`}
+function dl(){try{const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='grocery-tracker-'+TODAY+'.json';document.body.appendChild(a);a.click();a.remove()}catch(e){}}
 function cp(){const t=$('#ex');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}}
 function imF(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>imp(r.result);r.readAsText(f)}
 function imp(t){try{const d=JSON.parse(t);if(!Array.isArray(d.products)||!Array.isArray(d.purchases))throw 0;if(d.purchases.some(r=>!U[r.unit]||!(r.price>=0)||!(r.qty>0)||!prod2(d,r.productId)))throw 0;ask('Replace all current data with the imported file?',()=>{S={products:d.products,purchases:d.purchases};save();render()})}catch(e){$('#ie').textContent='That file is not a valid export.'}}
