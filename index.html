@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grocery Price Tracker</title>
+<style>
+:root{--bg:#f7f5f0;--card:#fff;--tx:#2b2b2b;--mu:#7a776f;--bd:#e6e2d9;--ac:#5c8a64;--acs:#e8f0e9;--wa:#c98a2b;--ba:#b9503f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1d1b;--card:#272725;--tx:#ecebe6;--mu:#a09d94;--bd:#3a3a36;--ac:#7fb088;--acs:#2c3a2f}}
+:root[data-theme="dark"]{--bg:#1d1d1b;--card:#272725;--tx:#ecebe6;--mu:#a09d94;--bd:#3a3a36;--ac:#7fb088;--acs:#2c3a2f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;display:flex;min-height:100vh}
+nav{width:220px;padding:24px 14px;border-right:1px solid var(--bd);position:sticky;top:0;height:100vh;flex:none}
+nav h1{font-size:16px;margin:0 10px 20px}nav a{display:block;padding:9px 12px;border-radius:10px;color:var(--mu);cursor:pointer;margin-bottom:2px}
+nav a.on{background:var(--acs);color:var(--ac);font-weight:600}
+main{flex:1;padding:28px 32px;max-width:1100px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}h2{margin:0;font-size:22px}h3{margin:0 0 12px;font-size:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}.grid .card{margin:0}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.g2 .card{margin:0}
+.stat b{display:block;font-size:24px}.mu{color:var(--mu);font-size:13px}.up{color:var(--ba)}.dn{color:var(--ac)}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:9px;padding:8px 14px;cursor:pointer;font:inherit}.btn.s{background:transparent;color:var(--tx);border:1px solid var(--bd)}.btn.d{background:var(--ba)}.btn.x{padding:3px 9px;font-size:13px}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--acs);color:var(--ac)}.pill.w{background:#f6e9d2;color:#946417}.pill.r{background:#f4dcd7;color:var(--ba)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}th{font-size:12px;color:var(--mu);font-weight:600}tr.best td{background:var(--acs)}tr.cl{cursor:pointer}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--bd);border-radius:9px;background:var(--card);color:var(--tx);width:100%}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 3px}.row{display:flex;gap:10px}.row>*{flex:1}.bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.bar>*{width:auto;flex:1;min-width:140px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px;z-index:20}
+#modal .card{width:100%;max-width:520px;margin:0}.err{color:var(--ba);font-size:13px;min-height:18px}.ban{background:#f6e9d2;color:#6f4c0f;border-radius:12px;padding:10px 14px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+svg{width:100%;height:auto}.empty{color:var(--mu);padding:12px 0}
+@media(max-width:760px){body{display:block;padding-bottom:64px}nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;height:auto;display:flex;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));border-right:0;border-top:1px solid var(--bd);background:var(--card);z-index:10;overflow-x:auto}nav h1{display:none}nav a{flex:1;font-size:11px;padding:8px 6px;text-align:center;white-space:nowrap;margin:0}main{padding:18px 14px}}
+</style></head><body>
+<nav id="nav"></nav><main id="main"></main><div id="modal"></div>
+<script>
+const U={g:['m',1],kg:['m',1000],ml:['v',1],l:['v',1000],pieces:['c',1],packs:['k',1]};
+const STORES=['Tesco','Sainsbury’s','Aldi','Lidl','Asda','Morrisons','Waitrose','M&S','Other'];
+const CATS=['Dairy','Meat','Vegetables','Fruit','Bakery','Frozen','Drinks','Snacks','Household','Other'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const NAV=[['dash','Dashboard'],['groc','My Groceries'],['cmp','Price Comparison'],['exp','Expiry Tracker'],['hist','Purchase History'],['set','Settings']];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const iso=d=>{const x=new Date();x.setDate(x.getDate()+d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const TODAY=iso(0),fd=s=>s?s.split('-').reverse().join('/'):'–';
+const dd=s=>Math.round((new Date(s+'T00:00')-new Date(TODAY+'T00:00'))/864e5);
+const money=v=>'£'+(v>0&&v<0.1?v.toFixed(3):v.toFixed(2));
+const K='grocery-tracker-v1';
+function demo(){const P=[],R=[];const add=(n,c,rows)=>{const id=uid();P.push({id,name:n,category:c,notes:'',demo:1});rows.forEach(r=>R.push({id:uid(),productId:id,store:r[0],brand:r[1],qty:r[2],unit:r[3],price:r[4],date:iso(r[5]),expiry:r[6]==null?'':iso(r[6]),notes:'',demo:1}))};
+add('Eggs','Dairy',[['Tesco','',12,'pieces',2.40,-40,-22],['Sainsbury’s','',6,'pieces',1.50,-25,-8],['Aldi','',12,'pieces',2.16,-10,8]]);
+add('Whole milk','Dairy',[['Tesco','',2,'l',1.60,-35,-28],['Asda','',4,'l',1.95,-20,-14],['Aldi','',2,'l',1.45,-5,3]]);
+add('Chicken breast','Meat',[['Tesco','',500,'g',3.00,-30,-26],['Sainsbury’s','',1,'kg',5.00,-15,-11],['Lidl','',650,'g',3.25,-3,2]]);
+add('Bananas','Fruit',[['Tesco','',5,'pieces',0.85,-28,-21],['Aldi','',6,'pieces',0.79,-12,-6],['Waitrose','',4,'pieces',1.10,-4,5]]);
+add('Greek yoghurt','Dairy',[['Tesco','Fage',500,'g',2.10,-33,-10],['Lidl','Milbona',1,'kg',2.49,-18,-1],['Sainsbury’s','Fage',450,'g',2.20,-6,12]]);
+return{products:P,purchases:R}}
+let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!S||!Array.isArray(S.products)||!Array.isArray(S.purchases))S=demo();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+let V='dash',PID=null,CMP=null,F={q:'',cat:'',sort:'recent'},HQ='';
+const prod=id=>S.products.find(p=>p.id===id);
+const pur=id=>S.purchases.filter(r=>r.productId===id).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+function up(r){const[t,f]=U[r.unit],b=r.qty*f,pc=Math.round(r.price*100);
+if(t=='m')return{t,v:pc/b,l:'per 100g'};if(t=='v')return{t,v:pc*10/b,l:'per litre'};return{t,v:pc/100/r.qty,l:t=='k'?'per pack':'per piece'}}
+function info(id){const all=pur(id).map(r=>({...r,u:up(r)}));const t=all.length?all[all.length-1].u.t:null;const ok=all.filter(r=>r.u.t==t);return{all,ok,skipped:all.length-ok.length}}
+const pk=r=>esc(r.qty+' '+r.unit);
+const bought=r=>r.kind!='check';
+const exp=r=>{if(!r.expiry)return'–';const n=dd(r.expiry);return fd(r.expiry)+' <span class="pill '+(n<0?'r':n<=3?'r':n<=7?'w':'')+'">'+(n<0?'expired':n==0?'today':n+'d')+'</span>'};
+function go(v,id){V=v;PID=id||null;render();window.scrollTo(0,0)}
+function render(){
+$('#nav').innerHTML='<h1>🥚 Grocery Tracker</h1>'+NAV.map(n=>`<a class="${(V==n[0]||(V=='prod'&&n[0]=='groc'))?'on':''}" onclick="go('${n[0]}')">${n[1]}</a>`).join('');
+const ban=S.purchases.some(r=>r.demo)||S.products.some(p=>p.demo)?'<div class="ban"><span>Demo data is loaded. It is marked “demo” and is not your real spending.</span><button class="btn s x" onclick="clearDemo()">Clear demo data</button></div>':'';
+const T={dash:['Dashboard',dash],groc:['My Groceries',groc],prod:['Product',prodV],cmp:['Price Comparison',cmpV],exp:['Expiry Tracker',expV],hist:['Purchase History',hist],set:['Settings',setV]}[V];
+$('#main').innerHTML=`<div class="top"><h2>${T[0]}</h2><span><button class="btn s" onclick="openForm('','check')">+ Check price</button> <button class="btn" onclick="openForm('','buy')">+ Add purchase</button></span></div>${ban}${T[1]()}`;
+if(V=='prod'){const i=info(PID);if(i.ok.length)window.tip(i.ok[i.ok.length-1].id)}}
+function tbl(h,rows){return rows.length?`<div class="tw"><table><tr>${h.map(x=>'<th>'+x+'</th>').join('')}</tr>${rows.join('')}</table></div>`:'<div class="empty">Nothing to show yet.</div>'}
+function acts(r){return`${r.kind=='check'?`<button class="btn x" onclick="buy('${r.id}')">Buy this</button> `:''}<button class="btn s x" onclick="openForm('${r.id}')">Edit</button> <button class="btn d x" onclick="del('${r.id}')">Delete</button>`}
+function changes(){return S.products.map(p=>{const i=info(p.id);if(i.ok.length<2)return null;const a=i.ok[i.ok.length-1].u.v,b=i.ok[i.ok.length-2].u.v;return{p,pct:(a-b)/b*100}}).filter(x=>x&&Math.abs(x.pct)>=0.05).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct))}
+function dash(){const m=TODAY.slice(0,7),mt=S.purchases.filter(r=>bought(r)&&r.date.startsWith(m)).reduce((a,r)=>a+Math.round(r.price*100),0)/100;
+const rec=S.purchases.filter(r=>bought(r)&&dd(r.date)>=-30&&dd(r.date)<=0);const ex=S.purchases.filter(r=>r.expiry&&dd(r.expiry)>=0&&dd(r.expiry)<=7).sort((a,b)=>a.expiry<b.expiry?-1:1);
+const last=[...S.purchases.filter(bought)].sort((a,b)=>a.date<b.date?1:-1).slice(0,5);const ch=changes();
+return`<div class="grid"><div class="card stat"><span class="mu">Spent this month</span><b>${money(mt)}</b></div><div class="card stat"><span class="mu">Products tracked</span><b>${S.products.length}</b></div><div class="card stat"><span class="mu">Purchases, last 30 days</span><b>${rec.length}</b></div><div class="card stat"><span class="mu">Expiring within 7 days</span><b>${ex.length}</b></div></div>
+<div class="g2"><div class="card"><h3>Monthly spending</h3>${bars()}</div><div class="card"><h3>Price changes</h3>${ch.length?ch.map(c=>`<div class="top" style="margin:0 0 8px"><a style="cursor:pointer" onclick="go('prod','${c.p.id}')">${esc(c.p.name)}</a><span class="${c.pct>0?'up':'dn'}">${c.pct>0?'▲':'▼'} ${Math.abs(c.pct).toFixed(1)}%</span></div>`).join('')+'<div class="mu">Latest unit price vs the previous purchase.</div>':'<div class="empty">Needs two purchases of a product.</div>'}</div>
+<div class="card"><h3>Recent purchases</h3>${tbl(['Date','Product','Store','Total'],last.map(r=>`<tr><td>${fd(r.date)}</td><td>${esc(prod(r.productId)?.name)}</td><td>${esc(r.store)}</td><td>${money(r.price)}</td></tr>`))}</div>
+<div class="card"><h3>Approaching expiry</h3>${tbl(['Product','Store','Expires'],ex.slice(0,6).map(r=>`<tr><td>${esc(prod(r.productId)?.name)}</td><td>${esc(r.store)}</td><td>${exp(r)}</td></tr>`))}</div></div><div class="card" style="margin-top:16px"><h3>Price checks (not bought)</h3>${tbl(['Date','Product','Store','Unit price',''],S.purchases.filter(r=>r.kind=='check').sort((a,b)=>a.date<b.date?1:-1).slice(0,6).map(r=>`<tr><td>${fd(r.date)}</td><td>${esc(prod(r.productId)?.name)}</td><td>${esc(r.store)}</td><td>${money(up(r).v)} <span class="mu">${up(r).l}</span></td><td>${acts(r)}</td></tr>`))}</div>`}
+function bars(){const ms=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);ms.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
+const v=ms.map(m=>S.purchases.filter(r=>bought(r)&&r.date.startsWith(m)).reduce((a,r)=>a+Math.round(r.price*100),0)/100),mx=Math.max(...v,1);
+return`<svg viewBox="0 0 360 170">${v.map((x,i)=>{const h=x/mx*110;return`<rect x="${i*60+12}" y="${135-h}" width="36" height="${h}" rx="6" fill="var(--ac)" opacity=".85"><title>${MON[+ms[i].slice(5)-1]}: ${money(x)}</title></rect><text x="${i*60+30}" y="${129-h}" font-size="11" text-anchor="middle" fill="var(--mu)">${x?'£'+x.toFixed(0):''}</text><text x="${i*60+30}" y="155" font-size="11" text-anchor="middle" fill="var(--mu)">${MON[+ms[i].slice(5)-1]}</text>`}).join('')}</svg>`}
+function groc(){let L=S.products.map(p=>{const i=info(p.id);return{p,i,l:i.all[i.all.length-1]}}).filter(x=>x.l&&x.p.name.toLowerCase().includes(F.q.toLowerCase())&&(!F.cat||x.p.category==F.cat));
+L.sort((a,b)=>F.sort=='alpha'?a.p.name.localeCompare(b.p.name):F.sort=='price'?b.l.price-a.l.price:(a.l.date<b.l.date?1:-1));
+return`<div class="bar"><input placeholder="Search products" value="${esc(F.q)}" oninput="F.q=this.value;rerender('gl')"><select onchange="F.cat=this.value;render()"><option value="">All categories</option>${CATS.map(c=>`<option ${F.cat==c?'selected':''}>${c}</option>`).join('')}</select><select onchange="F.sort=this.value;render()"><option value="recent" ${F.sort=='recent'?'selected':''}>Most recent</option><option value="alpha" ${F.sort=='alpha'?'selected':''}>A–Z</option><option value="price" ${F.sort=='price'?'selected':''}>Price (high to low)</option></select></div><div class="card" id="gl">${gl(L)}</div>`}
+function gl(L){return tbl(['Product','Category','Latest price','Unit price','Store','Last recorded','Expiry'],L.map(x=>`<tr class="cl" onclick="go('prod','${x.p.id}')"><td><b>${esc(x.p.name)}</b>${x.p.demo?' <span class="pill w">demo</span>':''}</td><td>${esc(x.p.category)}</td><td>${money(x.l.price)}</td><td>${money(x.l.u.v)} <span class="mu">${x.l.u.l}</span></td><td>${esc(x.l.store)}${x.l.kind=='check'?' <span class="pill w">checked</span>':''}</td><td>${fd(x.l.date)}</td><td>${exp(x.l)}</td></tr>`))}
+function rerender(){const k=document.activeElement,pos=k.selectionStart;if(V=='groc'){render();const n=document.querySelector('.bar input');n.focus();n.setSelectionRange(pos,pos)}}
+function prodV(){const p=prod(PID);if(!p){V='groc';return groc()}const i=info(p.id),ok=i.ok;if(!i.all.length)return'<div class="empty">No purchases.</div>';
+const vs=ok.map(r=>r.u.v),l=ok[ok.length-1],lbl=l.u.l;
+return`<div class="mu" style="margin:-10px 0 14px"><a style="cursor:pointer;color:var(--ac)" onclick="go('groc')">← My Groceries</a> · ${esc(p.category)}${p.notes?' · '+esc(p.notes):''}</div>
+<div class="grid"><div class="card stat"><span class="mu">Latest price</span><b>${money(l.price)}</b></div><div class="card stat"><span class="mu">Latest ${lbl}</span><b>${money(l.u.v)}</b></div><div class="card stat"><span class="mu">Cheapest ${lbl}</span><b class="dn">${money(Math.min(...vs))}</b></div><div class="card stat"><span class="mu">Highest ${lbl}</span><b class="up">${money(Math.max(...vs))}</b></div><div class="card stat"><span class="mu">Last purchased</span><b style="font-size:19px">${fd(l.date)}</b></div></div>
+<div class="card"><h3>Unit price history (${lbl})</h3>${line(ok)}<div id="tip" class="mu" style="min-height:22px"></div>${i.skipped?`<div class="mu">${i.skipped} purchase(s) use an incompatible unit type and are not charted.</div>`:''}</div>
+<div class="card"><h3>Supermarket comparison</h3>${cmpT(p.id)}</div>
+<div class="card"><h3>Purchase history</h3>${tbl(['Date','Store','Brand','Pack','Total','Unit price','Expiry',''],[...i.all].reverse().map(r=>`<tr><td>${fd(r.date)}</td><td>${esc(r.store)} ${r.kind=='check'?'<span class="pill w">checked</span>':'<span class="pill">bought</span>'}</td><td>${esc(r.brand)||'–'}</td><td>${pk(r)}</td><td>${money(r.price)}</td><td>${money(r.u.v)} <span class="mu">${r.u.l}</span></td><td>${exp(r)}</td><td>${acts(r)}</td></tr>`))}</div>
+<button class="btn d x" onclick="delP('${p.id}')">Delete product and all its purchases</button>`}
+function line(ok){const W=640,H=230,m=48;const xs=ok.map(r=>new Date(r.date).getTime()),ys=ok.map(r=>r.u.v);const x0=Math.min(...xs),x1=Math.max(...xs),lo=Math.min(...ys)*.9,hi=Math.max(...ys)*1.1;
+const X=t=>x1==x0?W/2:m+(t-x0)/(x1-x0)*(W-m-20),Y=v=>H-30-(v-lo)/(hi-lo)*(H-50);
+const pts=ok.map((r,i)=>[X(xs[i]),Y(ys[i])]);const tr=ok.length>1?(ys[ys.length-1]>ys[0]?'▲ rising':ys[ys.length-1]<ys[0]?'▼ falling':'flat'):'';
+return`<svg viewBox="0 0 ${W} ${H}">${[lo,(lo+hi)/2,hi].map(v=>`<line x1="${m}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bd)"/><text x="${m-6}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--mu)">${money(v)}</text>`).join('')}
+<polyline fill="none" stroke="var(--ac)" stroke-width="2" points="${pts.map(p=>p.join(',')).join(' ')}"/>${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--card)" stroke="var(--ac)" stroke-width="2.5" style="cursor:pointer" onclick="tip('${ok[i].id}')"><title>${fd(ok[i].date)} · ${ok[i].store} · ${money(ys[i])}</title></circle>`).join('')}
+<text x="${m}" y="${H-8}" font-size="11" fill="var(--mu)">${fd(ok[0].date)}</text><text x="${W-10}" y="${H-8}" font-size="11" text-anchor="end" fill="var(--mu)">${fd(ok[ok.length-1].date)}</text>${tr?`<text x="${W-10}" y="14" font-size="12" text-anchor="end" fill="var(--mu)">Trend: ${tr}</text>`:''}</svg>`}
+window.tip=id=>{const r=S.purchases.find(x=>x.id==id),t=$('#tip');if(r&&t){const u=up(r);t.innerHTML=`<b>${fd(r.date)}</b> · ${esc(r.store)} · ${pk(r)} · ${money(r.price)} total · <b>${money(u.v)}</b> ${u.l}`}};
+function cmpT(id){const i=info(id);if(!i.ok.length)return'<div class="empty">No data.</div>';const A=[...i.ok].sort((a,b)=>a.u.v-b.u.v),w=A[A.length-1];
+return tbl(['Supermarket','Pack','Total','Unit price','Recorded','vs most expensive','Notes',''],A.map((r,k)=>{const n=-dd(r.date),d=w.u.v-r.u.v;return`<tr class="${k==0&&A.length>1?'best':''}"><td>${esc(r.store)} ${r.kind=='check'?'<span class="pill w">checked</span> ':''}${k==0&&A.length>1?'<span class="pill">cheapest</span>':''}</td><td>${pk(r)}</td><td>${money(r.price)}</td><td><b>${money(r.u.v)}</b> <span class="mu">${r.u.l}</span></td><td>${fd(r.date)} <span class="pill ${n>30?'w':''}">${n} days ago</span></td><td>${r===w||d<=0?'most expensive':`−${(d/w.u.v*100).toFixed(1)}% (${money(d)} ${r.u.l} less)`}</td><td style="white-space:normal;min-width:120px">${esc(r.notes)||'–'}</td><td>${r.kind=='check'?`<button class="btn x" onclick="buy('${r.id}')">Buy this</button>`:''}</td></tr>`}))+`<div class="mu" style="margin-top:8px">Shows every record you’ve entered, cheapest first. Older prices may be out of date.${i.skipped?` ${i.skipped} record(s) with a different unit type (e.g. grams vs pieces) can’t be compared and are hidden.`:''}</div>`}
+function cmpV(){const L=S.products.filter(p=>pur(p.id).length);if(!CMP||!prod(CMP))CMP=L[0]&&L[0].id;
+return`<div class="bar"><select onchange="CMP=this.value;render()">${L.map(p=>`<option value="${p.id}" ${p.id==CMP?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div><div class="card">${CMP?cmpT(CMP):'<div class="empty">Add a purchase first.</div>'}</div>`}
+function expV(){const R=S.purchases.filter(r=>r.expiry).map(r=>({...r,n:dd(r.expiry)}));const G=[['Expired (last 7 days)',r=>r.n<0&&r.n>=-7],['Expiring within 3 days',r=>r.n>=0&&r.n<=3],['Expiring within 7 days',r=>r.n>3&&r.n<=7],['Expiring within 14 days',r=>r.n>7&&r.n<=14],['No upcoming expiry',r=>r.n>14]];
+return G.map(g=>{const L=R.filter(g[1]).sort((a,b)=>a.n-b.n);return`<div class="card"><h3>${g[0]} <span class="mu">(${L.length})</span></h3>${L.length?tbl(['Product','Qty','Store','Bought','Expires'],L.map(r=>`<tr><td>${esc(prod(r.productId)?.name)}</td><td>${pk(r)}</td><td>${esc(r.store)}</td><td>${fd(r.date)}</td><td>${exp(r)}</td></tr>`)):'<div class="empty">None.</div>'}</div>`}).join('')}
+function hist(){const L=[...S.purchases].filter(r=>(prod(r.productId)?.name||'').toLowerCase().includes(HQ.toLowerCase())).sort((a,b)=>a.date<b.date?1:-1);
+return`<div class="bar"><input placeholder="Filter by product" value="${esc(HQ)}" oninput="HQ=this.value;histR()"></div><div class="card" id="hl">${hl(L)}</div>`}
+function hl(L){return tbl(['Date','Product','Store','Pack','Total','Unit price','Expiry',''],L.map(r=>`<tr><td>${fd(r.date)}</td><td>${esc(prod(r.productId)?.name)}${r.demo?' <span class="pill w">demo</span>':''}${r.kind=='check'?' <span class="pill w">checked</span>':''}</td><td>${esc(r.store)}</td><td>${pk(r)}</td><td>${money(r.price)}</td><td>${money(up(r).v)} <span class="mu">${up(r).l}</span></td><td>${exp(r)}</td><td>${acts(r)}</td></tr>`))}
+function histR(){$('#hl').innerHTML=hl([...S.purchases].filter(r=>(prod(r.productId)?.name||'').toLowerCase().includes(HQ.toLowerCase())).sort((a,b)=>a.date<b.date?1:-1))}
+function setV(){return`<div class="card"><h3>Export data</h3><p class="mu">Copy this JSON and keep it somewhere safe.</p><textarea id="ex" rows="5" readonly>${esc(JSON.stringify(S))}</textarea><p><button class="btn" onclick="cp()">Copy to clipboard</button></p></div>
+<div class="card"><h3>Import data</h3><p class="mu">Choose an exported .json file, or paste the JSON. This replaces your current data.</p><input type="file" accept=".json,application/json" onchange="imF(this)"><textarea id="im" rows="4" placeholder="Paste JSON here" style="margin-top:10px"></textarea><p class="err" id="ie"></p><button class="btn" onclick="imp($('#im').value)">Import</button></div>
+<div class="card"><h3>Reset</h3><button class="btn s" onclick="clearDemo()">Clear demo data</button> <button class="btn d" onclick="ask('Delete ALL data permanently?',()=>{S={products:[],purchases:[]};save();render()})">Delete everything</button></div>`}
+function cp(){const t=$('#ex');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}}
+function imF(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>imp(r.result);r.readAsText(f)}
+function imp(t){try{const d=JSON.parse(t);if(!Array.isArray(d.products)||!Array.isArray(d.purchases))throw 0;if(d.purchases.some(r=>!U[r.unit]||!(r.price>=0)||!(r.qty>0)||!prod2(d,r.productId)))throw 0;ask('Replace all current data with the imported file?',()=>{S={products:d.products,purchases:d.purchases};save();render()})}catch(e){$('#ie').textContent='That file is not a valid export.'}}
+const prod2=(d,id)=>d.products.some(p=>p.id===id);
+function clearDemo(){ask('Remove all demo products and purchases?',()=>{S.purchases=S.purchases.filter(r=>!r.demo);S.products=S.products.filter(p=>!p.demo||S.purchases.some(r=>r.productId==p.id));save();render()})}
+function ask(msg,cb){window._cb=cb;$('#modal').style.display='flex';$('#modal').innerHTML=`<div class="card"><p>${msg}</p><div class="row"><button class="btn s" onclick="closeM()">Cancel</button><button class="btn d" onclick="closeM();_cb()">Confirm</button></div></div>`}
+const closeM=()=>{$('#modal').style.display='none'};
+function del(id){ask('Delete this purchase record permanently?',()=>{S.purchases=S.purchases.filter(r=>r.id!==id);if(!pur(PID).length&&V=='prod')V='groc';save();render()})}
+function delP(id){ask('Delete this product and all its purchases permanently?',()=>{S.purchases=S.purchases.filter(r=>r.productId!==id);S.products=S.products.filter(p=>p.id!==id);V='groc';save();render()})}
+function openForm(id,k){const r=id?S.purchases.find(x=>x.id===id):null,kind=k||(r?r.kind||'buy':'buy'),pid=r?r.productId:(V=='prod'?PID:'');const sel=(a,v)=>a.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('');
+const st=r&&!STORES.includes(r.store)?'Other':(r?r.store:'Tesco');
+$('#modal').style.display='flex';$('#modal').innerHTML=`<div class="card"><h3>${r?'Edit':'Add'} record</h3><label>Type</label><select id="fk" onchange="fkc()"><option value="check" ${kind=='check'?'selected':''}>Just checking a price (not buying)</option><option value="buy" ${kind=='buy'?'selected':''}>Actually buying / bought</option></select>
+<label>Product</label><select id="fp" onchange="fpc()"><option value="">+ New product</option>${S.products.map(p=>`<option value="${p.id}" ${p.id==pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+<div id="np"><label>Product name</label><input id="fn"><div class="row"><div><label>Category</label><select id="fc">${sel(CATS,'')}</select></div><div><label>Brand (optional)</label><input id="fb"></div></div><label>Product notes (optional)</label><input id="fo"></div>
+<div id="ob" style="display:none"><label>Brand (optional)</label><input id="fb2"></div>
+<div class="row"><div><label>Supermarket</label><select id="fs" onchange="$('#fso').style.display=this.value=='Other'?'block':'none'">${sel(STORES,st)}</select><input id="fso" placeholder="Supermarket name" style="display:${st=='Other'?'block':'none'};margin-top:6px"></div><div><label>Total price (£)</label><input id="fpr" type="number" step="0.01" min="0" inputmode="decimal" oninput="pv()"></div></div>
+<div class="row"><div><label>Quantity</label><input id="fq" type="number" step="any" min="0" inputmode="decimal" oninput="pv()"></div><div><label>Unit</label><select id="fu" onchange="pv()">${sel(Object.keys(U),'pieces')}</select></div></div>
+<div class="row"><div><label>Date</label><input id="fd" type="date" value="${TODAY}"></div><div><label>Expiry date (optional)</label><input id="fe" type="date"></div></div>
+<label>Notes (optional)</label><input id="fno"><p id="pv" class="mu" style="min-height:20px"></p><p class="err" id="er"></p>
+<div class="row"><button class="btn s" onclick="closeM()">Cancel</button><button class="btn" onclick="sv('${id||''}')">Save</button></div></div>`;
+if(r){$('#fb2').value=r.brand||'';$('#fpr').value=r.price;$('#fq').value=r.qty;$('#fu').value=r.unit;$('#fd').value=(r.kind=='check'&&kind=='buy')?TODAY:r.date;$('#fe').value=r.expiry||'';$('#fno').value=r.notes||'';$('#fso').value=st=='Other'?r.store:''}
+fpc();pv();fkc()}
+function fpc(){const e=$('#fp').value;$('#np').style.display=e?'none':'block';$('#ob').style.display=e?'block':'none';if(e&&!$('#fq').value){const l=pur(e).pop();if(l)$('#fu').value=l.unit}}
+function pv(){const p=parseFloat($('#fpr').value),q=parseFloat($('#fq').value);$('#pv').textContent=p>=0&&q>0?'Unit price: '+money(up({price:p,qty:q,unit:$('#fu').value}).v)+' '+up({price:p,qty:q,unit:$('#fu').value}).l:''}
+function fkc(){$('#fe').parentElement.style.display=$('#fk').value=='buy'?'block':'none'}
+function buy(id){openForm(id,'buy')}
+function sv(id){const e=m=>{$('#er').textContent=m},pe=$('#fp').value,name=$('#fn').value.trim(),price=parseFloat($('#fpr').value),qty=parseFloat($('#fq').value),date=$('#fd').value,ex=$('#fe').value;
+let store=$('#fs').value;if(store=='Other')store=$('#fso').value.trim();
+if(!pe&&!name)return e('Enter a product name or choose an existing product.');if(!store)return e('Enter the supermarket.');
+if(!(price>=0))return e('Enter a valid price.');if(!(qty>0))return e('Quantity must be greater than 0.');if(!date)return e('Enter the purchase date.');if(ex&&ex<date&&$('#fk').value=='buy')return e('Expiry date cannot be before the purchase date.');
+let pid=pe;if(!pid){const f=S.products.find(p=>p.name.toLowerCase()==name.toLowerCase());if(f)pid=f.id;else{pid=uid();S.products.push({id:pid,name,category:$('#fc').value,notes:$('#fo').value.trim()})}}
+const rec={id:id||uid(),productId:pid,store,brand:(pe?$('#fb2').value:$('#fb').value).trim(),qty,unit:$('#fu').value,price:Math.round(price*100)/100,date,kind:$('#fk').value,expiry:$('#fk').value=='buy'?ex:'',notes:$('#fno').value.trim()};
+if(id){const k=S.purchases.findIndex(r=>r.id==id);rec.demo=S.purchases[k].demo;S.purchases[k]=rec}else S.purchases.push(rec);
+save();closeM();render()}
+render();
+</script></body></html>
